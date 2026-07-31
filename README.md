@@ -1,7 +1,7 @@
 # RTS-capstone-26
 Final assignment (capstone) for Summer '26 Real Time Systems course.
 
-<your theme sentence>
+A RADAR echo‑detection system that guarantees bounded, provable response latency to every incoming pulse — even under full processor load — so a missed detection is never silent.
 
 ## Demo
 - Video: <YouTube / Wokwi link>
@@ -55,3 +55,15 @@ This is tailored for an Avionics system software. The design choices were made a
 - The RADAR detection path is pinned to its own core and given priority over everything except `load_a` (deliberately chosen), so a non-critical feature could never delay a RADAR detection. This is a core expectation for flight-relative sensing.
 - Graceful degradation sheds the non-critical system (beacon) first, never the RADAR path, and defaults to a fail-safe rather than a self-healing degraded state. This is expected in safety-relevant airborne software.
 - The hazard analysis is specifically mapped to DO-178C.
+
+## FINAL REFLECTION
+Project: A RADAR echo-detection system that guarantees bounded, provable response latency to every incoming pulse (even under full processor load) so a missed detection is never silent.
+
+What I would do differently
+I wish I understood how to use github more thoroughly, I think it would have been nice to upload my Wokwi applications through it.
+
+What was harder than expected
+Trying to get the WCET to work, I was still unable to get it to work by the time I needed to upload my code and submit this project. I was able to get the WCET for the load tasks but everything else was messing up my webpage, I decided to forgo the WCET to keep the webpage working.
+
+The most valuable thing I learned
+Learning the beginning concepts of the ESP32 was really interesting and might be helpful for future career prospects.
