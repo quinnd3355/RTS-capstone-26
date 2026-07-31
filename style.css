@@ -444,6 +444,32 @@ tr.row-pending td{color:var(--text-faint); font-style:italic;}
 }
 .role-list code{color:var(--amber);}
 
+/* ---- final reflection ---- */
+.reflection-project{
+  font-family:var(--f-mono); font-size:.78rem;
+  border-left:2px solid var(--cyan-dim);
+  padding-left:.9rem;
+  margin-bottom:2rem;
+  color:var(--text-dim);
+  max-width:74ch;
+}
+.reflection-project strong{color:var(--cyan);}
+.reflection-list{display:grid; gap:.9rem;}
+.reflection-card{
+  border:1px solid var(--hairline);
+  border-left:3px solid var(--cyan-dim);
+  border-radius:4px;
+  background:var(--panel);
+  padding:1rem 1.2rem;
+}
+.reflection-card h3{
+  font-family:var(--f-body); font-weight:600; font-size:1rem;
+  color:var(--text); margin:0 0 .5rem;
+}
+.reflection-card p{
+  font-size:.85rem; margin:0; max-width:none; color:var(--text-dim);
+}
+
 /* ---- footer ---- */
 .footer{
   text-align:center; padding:2.4rem 1.5rem 3rem;
