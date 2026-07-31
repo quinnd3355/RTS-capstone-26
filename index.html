@@ -33,14 +33,10 @@
   <section class="hero" id="top">
     <div class="hero-grid">
       <div class="hero-copy">
-        <p class="eyebrow">EEL 4775 · REAL-TIME SYSTEMS · FINAL CAPSTONE</p>
+        <p class="eyebrow">RTS‑CAPSTONE‑26 — FINAL ASSIGNMENT (CAPSTONE) FOR SUMMER '26 REAL TIME SYSTEMS COURSE</p>
         <h1>A RADAR echo‑detection system that guarantees bounded, provable
           response latency to every incoming pulse — even under full
           processor load — so a missed detection is never silent.</h1>
-        <p class="hero-sub">Application 3 (interrupts &amp; bottom‑half
-          pattern) with UAV‑01 status beacon and HTTP dashboard folded in
-          from Application 1. Tailored for an avionics target role,
-          hazard‑mapped to DO‑178C.</p>
         <div class="hero-meta">
           <span>WOKWI PROJECT — DUBRE‑FINAL‑RTS26SUMMER</span>
           <span>TARGET — ESP32‑S3</span>
@@ -119,12 +115,13 @@
   <!-- ARCHITECTURE -->
   <section class="panel" id="architecture">
     <h2><span class="tabnum">02</span>Architecture</h2>
-    <p><code>GPIO18</code> stands in for a RADAR receiver's echo‑return
+    <p><code>GPIO18</code> stands in for RADAR receiver's echo‑return
       line. On every edge, <code>button_isr</code> timestamps the event and
-      signals two independent bottom‑half tasks on Core 1 — one via binary
-      semaphore, one via direct task notification. A low‑priority watchdog
-      polls the worst observed wake time against a fixed budget and pauses
-      the UAV‑01 status beacon if the RADAR path falls behind.</p>
+      signals two independent bottom‑half tasks on Core 1. One via the
+      binary semaphore and one via direct task notification. A
+      low‑priority watchdog polls the worst observed wake time against a
+      fixed budget and pauses the UAV‑01 status beacon if the RADAR path
+      falls behind.</p>
     <div class="diagram" role="img" aria-label="Core 1 handles the RADAR ISR and bottom-half tasks, the watchdog, and background load. Core 0 handles Wi-Fi and the HTTP server, isolated from the RADAR path.">
       <div class="diagram-core">
         <span class="diagram-core-label">CORE 1 — RADAR CRITICAL</span>
@@ -161,10 +158,10 @@
           <tr><td>Inner‑Loop Control <code>(load_b)</code></td><td>20 ms</td><td>13,551 µs</td><td>0.678</td><td>10</td><td>20 ms</td></tr>
           <tr><td>Telemetry Packet <code>(load_c)</code></td><td>500 ms</td><td>28,471 µs</td><td>0.057</td><td>5</td><td>500 ms</td></tr>
           <tr><td>Logging <code>(load_d)</code></td><td>1000 ms</td><td>60,651 µs</td><td>0.061</td><td>2</td><td>1000 ms</td></tr>
-          <tr class="row-radar"><td><code>radar_sem</code></td><td>30 ms¹</td><td>2,718 µs idle / 2,806 µs loaded</td><td>—</td><td>12</td><td>6 ms²</td></tr>
-          <tr class="row-radar"><td><code>radar_notif</code></td><td>30 ms¹</td><td>40 µs idle / 2,509 µs loaded</td><td>—</td><td>12</td><td>6 ms²</td></tr>
+          <tr class="row-radar"><td><code>radar_sem</code></td><td>30 ms</td><td>2,718 µs idle / 2,806 µs loaded</td><td>—</td><td>12</td><td>6 ms</td></tr>
+          <tr class="row-radar"><td><code>radar_notif</code></td><td>30 ms</td><td>40 µs idle / 2,509 µs loaded</td><td>—</td><td>12</td><td>6 ms</td></tr>
           <tr class="row-pending"><td><code>watchdog</code></td><td>100 ms</td><td>not yet measured</td><td>—</td><td>4</td><td>100 ms</td></tr>
-          <tr class="row-pending"><td><code>uav_beacon</code></td><td>1000 ms</td><td>not yet measured</td><td>—</td><td>2³</td><td>1000 ms</td></tr>
+          <tr class="row-pending"><td><code>uav_beacon</code></td><td>1000 ms</td><td>not yet measured</td><td>—</td><td>2</td><td>1000 ms</td></tr>
         </tbody>
       </table>
     </div>
@@ -179,56 +176,55 @@
         <div class="gauge-mark" style="left:75.7%"><span>RM BOUND 0.757</span></div>
         <div class="gauge-mark gauge-mark-end" style="left:100%"><span>1.0</span></div>
       </div>
-      <p class="gauge-note">U = 0.829 sits above the Rate‑Monotonic
-        sufficiency bound but below 1.0 — EDF‑feasible, not RM‑guaranteed.
-        This figure covers the four background load tasks only; the RADAR
-        bottom‑halves, watchdog, and beacon aren't folded in above since
-        their own WCET isn't fully instrumented yet.</p>
+      <p class="gauge-note">Total utilization U = 0.83 (RM bound / EDF
+        feasible: U = 0.829 is above the Rate‑Monotonic sufficiency bound
+        (0.757) but &lt; 1.0. It's EDF‑feasible but RM is not
+        guaranteed.)</p>
     </div>
 
     <div class="note-block">
-      <p><strong>¹</strong> RADAR bottom‑halves are sporadic, not periodic —
-        30 ms (<code>DEBOUNCE_US</code>) is used as a conservative minimum
-        arrival time standing in for period T.</p>
-      <p><strong>²</strong> Deadline ≠ period here, on purpose.
-        <code>LATENCY_BUDGET_US</code> (6 ms) is the system's actual
-        response requirement — shorter than the 30 ms arrival floor. That's
-        a D &lt; T case, so Deadline‑Monotonic priority assignment is the
-        correct model, not plain RM: by deadline alone the RADAR tasks
-        should hold the highest priority in the system. The code instead
-        gives <code>load_a</code> the top slot — deliberately, so it's the
-        one task capable of tripping the latency watchdog under
-        contention, not an oversight.</p>
-      <p><strong>³</strong> <code>uav_beacon</code>'s listed priority (2)
-        collides with <code>load_d</code>'s priority (2) in this table —
-        worth double‑checking against the actual <code>BEACON_PRIO</code>
-        constant in <code>main.c</code> before this goes final.</p>
-      <p>The HTTP server task is excluded — aperiodic, pinned to Core 0.</p>
+      <p>RADAR bottom halves are sporadic, not periodic. 30 ms
+        (<code>DEBOUNCE_US</code>) is used as a conservative minimum
+        arrival time, standing in for period T in this table. Deadline
+        does not equal period here (for <code>radar_sem</code> and
+        <code>radar_notif</code>) on purpose. The
+        <code>LATENCY_BUDGET_US</code> (set to 6 ms) is the system's
+        response requirement, which is shorter than the 30 ms arrival
+        floor. This makes the system a Deadline‑Monotonic priority and not
+        just a usual Rate‑Monotonic scheduling system. In theory, priority
+        should be scheduled by deadline and not period. In the table, this
+        means RADAR (the sem and notif sections) should hold the highest
+        priority; however, the code gives <code>load_a</code> (Attitude
+        Sensor) the highest priority. This is to allow <code>load_a</code>
+        to be the only task that can trip the latency watchdog under
+        contention.</p>
+      <p>The HTTP server task is excluded since it is aperiodic and pinned
+        to Core 0.</p>
     </div>
   </section>
 
   <!-- HAZARD ANALYSIS -->
   <section class="panel" id="hazards">
     <h2><span class="tabnum">04</span>Hazard analysis &amp; standard mapping</h2>
-    <p class="standard-line">STANDARD — <strong>DO‑178C</strong>, Software
-      Considerations in Airborne Systems and Equipment Certification.
-      Chosen to match the avionics target role. Illustrative classroom
-      mapping only — no DER review, no formal certification liaison
-      process, no independent verification team.</p>
+    <p class="standard-line"><strong>Standard:</strong> DO‑178C, Software
+      Considerations in Airborne Systems and Equipment Certification. This
+      was chosen to match the target role: avionics. No DER view, no
+      formal certification liaison process, and no independent
+      verification team.</p>
 
     <div class="hazard-list">
 
       <article class="hazard-card sev-hazardous">
         <div class="hazard-head"><span class="hazard-num">01</span><span class="sev-chip">HAZARDOUS</span></div>
-        <h3>Binary semaphore has no count — can drop a signal under burst input</h3>
-        <p class="hazard-effect">RADAR echo detected but never reported.</p>
-        <p class="hazard-mit"><strong>Mitigation —</strong> redundant lossless notification path runs in parallel; hit counts cross‑checked.</p>
-        <p class="hazard-map"><strong>DO‑178C —</strong> robustness / adverse‑condition testing.</p>
+        <h3>Binary semaphore has no count; can drop a signal under burst input</h3>
+        <p class="hazard-effect">RADAR echo detected but not reported.</p>
+        <p class="hazard-mit"><strong>Mitigation —</strong> Redundant losses; hit counts cross‑checked.</p>
+        <p class="hazard-map"><strong>DO‑178C —</strong> Robustness/adverse condition testing.</p>
       </article>
 
       <article class="hazard-card sev-major">
         <div class="hazard-head"><span class="hazard-num">02</span><span class="sev-chip">MAJOR</span></div>
-        <h3><code>isr_entry_time_us</code> is a single shared global, overwritten every firing</h3>
+        <h3><code>isr_entry_time_us</code> is a single shared global overwritten every firing</h3>
         <p class="hazard-effect">Under burst input, a bottom‑half task can compute latency against the wrong event.</p>
         <p class="hazard-mit"><strong>Mitigation —</strong> documented as a known race.</p>
         <p class="hazard-map"><strong>DO‑178C —</strong> traceability of low‑level requirements.</p>
@@ -236,42 +232,42 @@
 
       <article class="hazard-card sev-hazardous">
         <div class="hazard-head"><span class="hazard-num">03</span><span class="sev-chip">HAZARDOUS</span></div>
-        <h3><code>esp_timer_start_once()</code> called from ISR context — not documented as ISR‑safe</h3>
-        <p class="hazard-effect">Undefined‑behavior risk in the safety‑relevant debounce re‑arm path.</p>
-        <p class="hazard-mit"><strong>Mitigation —</strong> accepted as a known limitation for now.</p>
-        <p class="hazard-map"><strong>DO‑178C —</strong> guidance on previously‑developed software requiring additional verification when used outside its documented contract.</p>
+        <h3><code>esp_timer_start_once()</code> called from ISR context is not documented as ISR‑safe in ESP‑IDF</h3>
+        <p class="hazard-effect">Undefined behavior risk.</p>
+        <p class="hazard-mit"><strong>Mitigation —</strong> accepted as a known limitation.</p>
+        <p class="hazard-map"><strong>DO‑178C —</strong> guidance on previously developed software requiring additional verification when used outside its documented contract.</p>
       </article>
 
       <article class="hazard-card sev-major">
         <div class="hazard-head"><span class="hazard-num">04</span><span class="sev-chip">MAJOR</span></div>
         <h3>Fixed debounce window sets a hard floor on minimum distinguishable echo spacing</h3>
         <p class="hazard-effect">Two genuine RADAR returns closer than 30 ms apart cannot be told apart.</p>
-        <p class="hazard-mit"><strong>Mitigation —</strong> stated explicitly as a derived requirement/limitation.</p>
-        <p class="hazard-map"><strong>DO‑178C —</strong> derived requirements must be fed back to the system safety process.</p>
+        <p class="hazard-mit"><strong>Mitigation —</strong> stated as a derived requirement/limitation.</p>
+        <p class="hazard-map"><strong>DO‑178C —</strong> derived requirements must be fed back to systems safety process.</p>
       </article>
 
       <article class="hazard-card sev-major">
         <div class="hazard-head"><span class="hazard-num">05</span><span class="sev-chip">MAJOR</span></div>
         <h3>RADAR ISR likely executes on a different core than the bottom‑half tasks it wakes</h3>
-        <p class="hazard-effect">Unmeasured, likely nonzero cross‑core handoff latency.</p>
+        <p class="hazard-effect">Unmeasured, nonzero cross‑core handoff latency.</p>
         <p class="hazard-mit"><strong>Mitigation —</strong> flagged for confirmation via <code>xPortGetCoreID()</code>.</p>
         <p class="hazard-map"><strong>DO‑178C —</strong> timing analysis must account for all sources of latency contributing to WCET.</p>
       </article>
 
       <article class="hazard-card sev-mixed">
         <div class="hazard-head"><span class="hazard-num">06</span><span class="sev-chip">MINOR–MAJOR</span></div>
-        <h3>Watchdog priority (4) sits below one background load task, <code>load_c</code> (5), despite a shorter period</h3>
-        <p class="hazard-effect">Detect‑to‑degrade reaction time is not currently bounded or measured.</p>
+        <h3>Watchdog priority (4) sits below one background load task (<code>load_c</code> (5)) despite shorter period</h3>
+        <p class="hazard-effect">Detect‑to‑degrade reaction time not currently bounded or measured.</p>
         <p class="hazard-mit"><strong>Mitigation —</strong> not yet resolved.</p>
-        <p class="hazard-map"><strong>DO‑178C —</strong> safety‑monitor timing itself is in scope for verification.</p>
+        <p class="hazard-map"><strong>DO‑178C —</strong> safety monitor timing itself is in scope for verification.</p>
       </article>
 
       <article class="hazard-card sev-na">
         <div class="hazard-head"><span class="hazard-num">07</span><span class="sev-chip">INTENTIONAL</span></div>
-        <h3>Latency‑max tracking is sticky — never resets once the budget is exceeded</h3>
-        <p class="hazard-effect">System will not self‑declare "recovered," even if latency later improves.</p>
-        <p class="hazard-mit"><strong>Mitigation —</strong> explicitly designed as a fail‑safe, not a bug.</p>
-        <p class="hazard-map"><strong>DO‑178C —</strong> consistent with its general preference for non‑silent failure handling.</p>
+        <h3>Latency‑max tracking is sticky, does not reset once budget is exceeded</h3>
+        <p class="hazard-effect">System will not declare "recovered" even if latency improves.</p>
+        <p class="hazard-mit"><strong>Mitigation —</strong> explicitly designed as a fail‑safe.</p>
+        <p class="hazard-map"><strong>DO‑178C —</strong> consistent with DO‑178C's general preference for non‑silent failure handling.</p>
       </article>
 
     </div>
@@ -282,14 +278,15 @@
     <h2><span class="tabnum">05</span>Graceful degradation</h2>
     <p>The latency watchdog (<code>watchdog_task</code>, priority 4) polls
       <code>max(latency_max_sem_us, latency_max_notif_us)</code> every
-      100 ms against <code>LATENCY_BUDGET_US</code> (6 ms, roughly 2× the
-      idle max of 2,718 µs). Crossing the budget sets
+      100 ms against <code>LATENCY_BUDGET_US</code> (6 ms, about 2x the
+      idle max of 2718 us). Crossing the budget sets
       <code>beacon_enabled = false</code> and
-      <code>system_degraded = true</code> — the non‑critical UAV‑01 beacon
-      stops toggling while the RADAR path is untouched. The tracked max is
-      never reset: once tripped, the system stays degraded rather than
-      self‑declaring healthy again — a deliberate choice for a
-      safety‑relevant system.</p>
+      <code>system_degrade = true</code>. The non‑critical UAV‑01 beacon
+      stops toggling while the RADAR path is untouched. The webpage shows
+      a 'Degraded' banner in real time.</p>
+    <p>The tracked max latency is never reset, so once the system has been
+      tripped, it stays degraded and does not self‑declare healthy again.
+      This was a deliberate choice for a safety‑relevant system.</p>
 
     <div class="status-mock">
       <div class="status-row">
@@ -308,32 +305,36 @@
   <!-- BUILD & RUN -->
   <section class="panel" id="build">
     <h2><span class="tabnum">06</span>Build &amp; run</h2>
-    <pre class="terminal"><code>TARGET        ESP32-S3 (Wokwi), ESP-IDF builder
-WOKWI PROJECT DUBRE-FINAL-RTS26Summer
+    <pre class="terminal"><code>TARGET      ESP32-S3 (Wokwi), ESP-IDF builder
+WOKWI PROJECT  DUBRE-FINAL-RTS26Summer
 
-GPIO MAP
-  18  button / RADAR echo in   (active-low, internal pull-up)
-  19  scope pulse out          (logic analyzer)
-  2   beacon LED out
+GPIOI MAP
+  18 = button/RADAR echo (active-low, internal pull-up)
+  19 = scope pulse out (logic analyzer)
+  2  = beacon LED out
 
 BUILD FLAGS
-  WITH_LOAD=0   idle baseline run
-  WITH_LOAD=1   loaded / contention run  (default)</code></pre>
+  WITH_LOAD controls background load
+  WITH_LOAD 0 for idle
+  WITH_LOAD 1 for loaded runs</code></pre>
   </section>
 
   <!-- TAILORED FOR -->
   <section class="panel panel-role" id="role">
     <h2><span class="tabnum">07</span>Tailored for — Avionics systems software</h2>
+    <p>This is tailored for an Avionics system software. The design
+      choices were made against that lens.</p>
     <ul class="role-list">
       <li>The RADAR detection path is pinned to its own core and given
         priority over everything except <code>load_a</code> (deliberately
-        chosen), so a non‑critical feature can never delay a RADAR
-        detection — a core expectation for flight‑relevant sensing.</li>
+        chosen), so a non‑critical feature could never delay a RADAR
+        detection. This is a core expectation for flight‑relative
+        sensing.</li>
       <li>Graceful degradation sheds the non‑critical system (beacon)
         first, never the RADAR path, and defaults to a fail‑safe rather
-        than a self‑healing degraded state — expected of safety‑relevant
-        airborne software.</li>
-      <li>The hazard analysis is mapped specifically to DO‑178C.</li>
+        than a self‑healing degraded state. This is expected in
+        safety‑relevant airborne software.</li>
+      <li>The hazard analysis is specifically mapped to DO‑178C.</li>
     </ul>
   </section>
 
