@@ -8,7 +8,24 @@ Final assignment (capstone) for Summer '26 Real Time Systems course.
 - Live Wokwi: DUBRE-FINAL-RTS26Summer
 
 ## Architecture
-<diagram + 2–3 sentences on the data/control flow>
+┌─────────────────────────────────────────────────────────┐
+        │                        CORE 1                            │
+  GPIO18 ─▶ button_isr (ISR)                                        │
+        │     │  timestamp, debounce-arm, dual-signal, scope pulse  │
+        │     ├──────────────┬────────────────────────┐             │
+        │     ▼              ▼                        │             │
+        │  btn_task_sem   btn_task_notif               │             │
+        │  (prio 12)      (prio 12)                    │             │
+        │  binary sem     direct notify                │             │
+        │  CAN drop       cannot drop                   │             │
+        │                                                │            │
+        │  watchdog_task (prio 4) ──polls latency──▶ degrades ▶ uav_beacon (prio 3)
+        │  load_a(15) load_b(10) load_c(5) load_d(2)  [WITH_LOAD=1] │
+        └─────────────────────────────────────────────────────────┘
+        ┌─────────────────────────────────────────────────────────┐
+        │  CORE 0 — Wi-Fi + HTTP server (prio 5), serves "/state"  │
+        └─────────────────────────────────────────────────────────┘
+`GPIO18` stands in for RADAR receiver's echo-return line. On every edge, `button_isr` timestamps the event and signals two independent bottom-half tasks on Core 1. One via the binary semaphore and one via direct task notification. A low-priority watchdog polls the worst observed wake time against a fixed budget and pauses the UAV-01 status beacon if the RADAR path falls behind. 
 
 ## Tasks & timing (WCET evidence)
 | Task               | Period T (ms) | WCET C                      | U=C/T | Priority | Deadline   |
